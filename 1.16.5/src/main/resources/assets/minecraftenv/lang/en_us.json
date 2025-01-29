@@ -1,0 +1,4 @@
+{
+  "command.minecraftenv.already_start_agent_server": "Already start on %s:%s",
+  "command.minecraftenv.ping": "Client %s ping: %s, ip: %s"
+}
