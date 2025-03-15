@@ -1,4 +1,7 @@
 {
   "command.minecraftenv.already_start_agent_server": "伺服器已在 %s:%s 啟動",
-  "command.minecraftenv.ping": "Client %s ping: %s, ip: %s"
+  "command.minecraftenv.ping": "Client %s ping: %s, ip: %s",
+  "command.minecraftenv.start_agent_server": "在 %s:%s 啟動伺服器",
+  "command.minecraftenv.stop_agent_server": "伺服器已關閉",
+  "command.minecraftenv.agent_server_not_started": "伺服器尚未啟動"
 }

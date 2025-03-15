@@ -1,4 +1,7 @@
 {
   "command.minecraftenv.already_start_agent_server": "Already start on %s:%s",
-  "command.minecraftenv.ping": "Client %s ping: %s, ip: %s"
+  "command.minecraftenv.ping": "Client %s ping: %s, ip: %s",
+  "command.minecraftenv.stop_agent_server": "Server stopped",
+  "command.minecraftenv.agent_server_not_started": "Server not started yet",
+  "command.minecraftenv.start_agent_server": "Start server on %s:%s"
 }

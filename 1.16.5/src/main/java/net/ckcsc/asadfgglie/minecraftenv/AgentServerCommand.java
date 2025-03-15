@@ -33,7 +33,15 @@ public class AgentServerCommand {
 
         dispatcher.register(Commands.literal(MinecraftEnv.MOD_ID)
             .then(Commands.literal("stop")
-                .executes(sourceCommandContext -> stopSocketServer())));
+                .executes(sourceCommandContext -> {
+                    if (stopSocketServer()) {
+                        sourceCommandContext.getSource().sendSuccess(new TranslationTextComponent("command.minecraftenv.stop_agent_server"), true);
+                    }
+                    else {
+                        sourceCommandContext.getSource().sendFailure(new TranslationTextComponent("command.minecraftenv.agent_server_not_started"));
+                    }
+                    return 0;
+                })));
     }
 
     private static int startSocketServer(CommandSource source, int port, String hostName) {
@@ -58,6 +66,9 @@ public class AgentServerCommand {
             });
 
             server.start();
+
+            Configuration cfg = server.getConfiguration();
+            source.sendSuccess(new TranslationTextComponent("command.minecraftenv.start_agent_server", cfg.getHostname(), cfg.getPort()), true);
             return 0;
         }
         else {
@@ -74,16 +85,16 @@ public class AgentServerCommand {
         }
     }
 
-    public static int stopSocketServer() {
+    public static boolean stopSocketServer() {
         if (server != null) {
             server.stop();
             server = null;
 
-            return 0;
+            return true;
         }
         else {
             LOGGER.warn("Server not started");
-            return -1;
+            return false;
         }
     }
 

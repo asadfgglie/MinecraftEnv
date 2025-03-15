@@ -19,9 +19,9 @@ version = "1.0-SNAPSHOT"
 group = "net.ckcsc.asadfgglie.minecraftenv" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = "minecraftenv"
 
-sourceCompatibility = targetCompatibility = "1.6" // Need this here so eclipse task generates correctly.
+sourceCompatibility = targetCompatibility = "1.8" // Need this here so eclipse task generates correctly.
 compileJava {
-    sourceCompatibility = targetCompatibility = "1.6"
+    sourceCompatibility = targetCompatibility = "1.8"
 }
 
 minecraft {
@@ -70,7 +70,7 @@ dependencies {
     // for more info...
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
-    implementation group: 'com.corundumstudio.socketio', name: 'netty-socketio', version: '2.0.12'
+    compile group: 'com.corundumstudio.socketio', name: 'netty-socketio', version: '2.0.12'
 }
 
 processResources {
