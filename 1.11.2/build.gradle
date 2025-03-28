@@ -70,7 +70,7 @@ dependencies {
     // for more info...
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
-    compile group: 'com.corundumstudio.socketio', name: 'netty-socketio', version: '2.0.12'
+//    compile group: 'com.corundumstudio.socketio', name: 'netty-socketio', version: '2.0.13'
 }
 
 processResources {

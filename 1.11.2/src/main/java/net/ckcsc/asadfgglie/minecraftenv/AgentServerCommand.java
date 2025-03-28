@@ -1,7 +1,10 @@
 package net.ckcsc.asadfgglie.minecraftenv;
 
 import com.corundumstudio.socketio.Configuration;
+import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
+import com.corundumstudio.socketio.listener.ExceptionListener;
+import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
@@ -10,13 +13,13 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentTranslation;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class AgentServerCommand extends CommandBase {
-    private static final Configuration CONFIGURATION = new Configuration();
+    private static final SocketConfig CONFIGURATION = new SocketConfig();
     private static SocketIOServer server;
+    private static final SimpleDateFormat date = new SimpleDateFormat("HH:mm:ss");
 
     public AgentServerCommand() {}
 
@@ -69,6 +72,7 @@ public class AgentServerCommand extends CommandBase {
     }
 
     private static void startSocketServer(ICommandSender source, int port, String hostName) {
+        // TODO: 用TCP協議重寫網路通訊
         CONFIGURATION.setPort(port);
         CONFIGURATION.setHostname(hostName);
 
@@ -82,11 +86,13 @@ public class AgentServerCommand extends CommandBase {
             });
 
             server.addEventListener("render", Object.class, (client, data, ackSender) -> {
-
+                MinecraftEnv.LOGGER.info("Client {} render: {}, ip: {}", client.getSessionId(), data, client.getRemoteAddress());
+                ackSender.sendAckData(getResponse());
             });
 
             server.addEventListener("step", AgentServerSchema.StepRequest.class, (client, data, ackSender) -> {
-
+                MinecraftEnv.LOGGER.info("Client {} step: {}, ip: {}", client.getSessionId(), data, client.getRemoteAddress());
+                ackSender.sendAckData(getResponse());
             });
 
             server.start();
@@ -105,12 +111,14 @@ public class AgentServerCommand extends CommandBase {
                 source.sendMessage(new TextComponentTranslation("command.minecraftenv.already_start_agent_server", cfg.getHostname(), cfg.getPort()));
             }
         }
+//        TextureRender.setIsCustomRenderingEnabled(true);
     }
 
     public static boolean stopSocketServer() {
         if (server != null) {
             server.stop();
             server = null;
+//            TextureRender.setIsCustomRenderingEnabled(false);
 
             return true;
         }
@@ -124,4 +132,73 @@ public class AgentServerCommand extends CommandBase {
         return server;
     }
 
+    public static AgentServerSchema.Response getResponse() {
+        return new AgentServerSchema.Response(getObservation(), getInfo());
+    }
+
+    public static Map<String, Object> getInfo() {
+        Map<String, Object> info = new HashMap<>();
+        info.put("timestamp", date.format(new Date()));
+        return info;
+    }
+
+    public static short[][][] getObservation(){
+        synchronized (MinecraftEnv.class) {
+            short[][][] observation = new short[MinecraftEnv.height][MinecraftEnv.width][3];
+
+            for (int y = 0; y < MinecraftEnv.height; y++) {
+                for (int x = 0; x < MinecraftEnv.width; x++) {
+                    int index = (y * MinecraftEnv.width + x) * 3; // RGB 格式索引計算
+                    observation[MinecraftEnv.height - 1 - y][x][0] = (short) (MinecraftEnv.current_frame.get(index) & 0xFF); // R
+                    observation[MinecraftEnv.height - 1 - y][x][1] = (short) (MinecraftEnv.current_frame.get(index + 1) & 0xFF); // G
+                    observation[MinecraftEnv.height - 1 - y][x][2] = (short) (MinecraftEnv.current_frame.get(index + 2) & 0xFF); // B
+                }
+            }
+
+            return observation;
+        }
+    }
+}
+
+class SocketConfig extends Configuration {
+    public SocketConfig() {
+        super();
+        this.setExceptionListener(new ExceptionListener() {
+            @Override
+            public void onEventException(Exception e, List<Object> args, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public void onDisconnectException(Exception e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public void onConnectException(Exception e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public void onPingException(Exception e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public void onPongException(Exception e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public boolean exceptionCaught(ChannelHandlerContext ctx, Throwable e) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+                return true;
+            }
+
+            @Override
+            public void onAuthException(Throwable e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+        });
+    }
 }
