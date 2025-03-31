@@ -67,7 +67,7 @@ public class AgentServerSchema {
         /**
          * np.ndarray((360, 640, 3), dtype=uint8) // rgb image with whid 640, height 360
          */
-        public final short[][][] observation;
+        public final int[][][] observation;
         /**
          * <code>
          * {
@@ -118,7 +118,7 @@ public class AgentServerSchema {
          */
         public final Map<String, Object> info;
 
-        public Response(short[][][] observation, Map<String, Object> info) {
+        public Response(int[][][] observation, Map<String, Object> info) {
             this.observation = observation;
             this.info = info;
         }

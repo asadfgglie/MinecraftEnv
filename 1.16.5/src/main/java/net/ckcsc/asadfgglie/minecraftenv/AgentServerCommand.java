@@ -1,21 +1,32 @@
 package net.ckcsc.asadfgglie.minecraftenv;
 
 import com.corundumstudio.socketio.Configuration;
+import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
+import com.corundumstudio.socketio.listener.ExceptionListener;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import io.netty.channel.ChannelHandlerContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.NativeImage;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.Commands;
+import net.minecraft.util.ScreenShotHelper;
 import net.minecraft.util.text.TranslationTextComponent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class AgentServerCommand {
-    private static final Configuration CONFIGURATION = new Configuration();
+    private static final SocketConfig CONFIGURATION = new SocketConfig();
     private static SocketIOServer server;
-
-    private static final Logger LOGGER = LogManager.getLogger(AgentServerCommand.class);
+    private static final SimpleDateFormat date = new SimpleDateFormat("HH:mm:ss");
 
     private AgentServerCommand() {}
 
@@ -45,6 +56,7 @@ public class AgentServerCommand {
     }
 
     private static int startSocketServer(CommandSource source, int port, String hostName) {
+        // TODO: Re-implement by TCP socket for low network delay
         CONFIGURATION.setPort(port);
         CONFIGURATION.setHostname(hostName);
 
@@ -52,17 +64,19 @@ public class AgentServerCommand {
             server = new SocketIOServer(CONFIGURATION);
 
             server.addEventListener("ping", String.class, (client, data, ackSender) -> {
-                LOGGER.info("Client {} ping: {}, ip: {}", client.getSessionId(), data, client.getRemoteAddress());
+                MinecraftEnv.LOGGER.info("Client {} ping: {}, ip: {}", client.getSessionId(), data, client.getRemoteAddress());
                 source.sendSuccess(new TranslationTextComponent("command.minecraftenv.ping", client.getSessionId(), data, client.getRemoteAddress()), true);
                 ackSender.sendAckData("pong");
             });
 
             server.addEventListener("render", Object.class, (client, data, ackSender) -> {
-//                Minecraft
+                MinecraftEnv.LOGGER.info("Client {} render: {}, ip: {}", client.getSessionId(), data, client.getRemoteAddress());
+                ackSender.sendAckData(getResponse());
             });
 
             server.addEventListener("step", AgentServerSchema.StepRequest.class, (client, data, ackSender) -> {
-
+                MinecraftEnv.LOGGER.info("Client {} step: {}, ip: {}", client.getSessionId(), data, client.getRemoteAddress());
+                ackSender.sendAckData(getResponse());
             });
 
             server.start();
@@ -93,12 +107,85 @@ public class AgentServerCommand {
             return true;
         }
         else {
-            LOGGER.warn("Server not started");
+            MinecraftEnv.LOGGER.warn("Server not started");
             return false;
         }
     }
 
     public static SocketIOServer getServer() {
         return server;
+    }
+
+    public static AgentServerSchema.Response getResponse() throws ExecutionException, InterruptedException {
+        return new AgentServerSchema.Response(getObservation(), getInfo());
+    }
+
+    public static Map<String, Object> getInfo() {
+        Map<String, Object> info = new HashMap<>();
+        info.put("timestamp", date.format(new Date()));
+        return info;
+    }
+
+    public static int[][][] getObservation() throws ExecutionException, InterruptedException {
+        CompletableFuture<int[][][]> future = new CompletableFuture<>();
+        Minecraft.getInstance().executeBlocking(() -> {
+            int[][][] image;
+            try (NativeImage nativeImage = ScreenShotHelper.takeScreenshot(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight(), Minecraft.getInstance().getMainRenderTarget())) {
+                image = new int[nativeImage.getHeight()][nativeImage.getWidth()][3];
+                for (int y = 0; y < nativeImage.getHeight(); y++) {
+                    for (int x = 0; x < nativeImage.getWidth(); x++) {
+                        int rgba = nativeImage.getPixelRGBA(x, y);
+                        image[y][x][0] = NativeImage.getR(rgba);
+                        image[y][x][1] = NativeImage.getG(rgba);
+                        image[y][x][2] = NativeImage.getB(rgba);
+                    }
+                }
+            }
+            future.complete(image);
+        });
+        return future.get();
+    }
+}
+
+class SocketConfig extends Configuration {
+    public SocketConfig() {
+        super();
+        this.setExceptionListener(new ExceptionListener() {
+            @Override
+            public void onEventException(Exception e, List<Object> args, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public void onDisconnectException(Exception e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public void onConnectException(Exception e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public void onPingException(Exception e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public void onPongException(Exception e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+
+            @Override
+            public boolean exceptionCaught(ChannelHandlerContext ctx, Throwable e) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+                return true;
+            }
+
+            @Override
+            public void onAuthException(Throwable e, SocketIOClient client) {
+                MinecraftEnv.LOGGER.error(e.getMessage(), e);
+            }
+        });
     }
 }
