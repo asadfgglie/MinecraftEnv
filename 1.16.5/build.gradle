@@ -139,9 +139,6 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
-
-    // https://mvnrepository.com/artifact/com.corundumstudio.socketio/netty-socketio
-    implementation group: 'com.corundumstudio.socketio', name: 'netty-socketio', version: '2.0.12'
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

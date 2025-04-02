@@ -1,9 +1,17 @@
 package net.ckcsc.asadfgglie.minecraftenv;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.SerializedName;
+import net.ckcsc.asadfgglie.minecraftenv.exception.VerifyException;
+import net.ckcsc.asadfgglie.minecraftenv.util.SocketInputStream;
+
+import java.io.IOException;
 import java.util.Map;
 
 public class AgentServerSchema {
     public static class StepRequest {
+        @SerializedName("esc")
         public final boolean ESC;
         public final boolean attack;
         public final boolean back;
@@ -21,29 +29,9 @@ public class AgentServerSchema {
         public final boolean swapHands;
         public final boolean use;
 
-        public StepRequest(boolean esc, boolean attack, boolean back, float[] camera, boolean drop, boolean forward,
+        private StepRequest(boolean esc, boolean attack, boolean back, float[] camera, boolean drop, boolean forward,
                            boolean[] hotbar, boolean inventory, boolean jump, boolean left, boolean pickItem, boolean right,
-                           boolean sneak, boolean sprint, boolean swapHands, boolean use) throws VerifyError {
-            if (camera == null) {
-                throw new VerifyError("camera should not be null");
-            }
-            else if (camera.length != 2) {
-                throw new VerifyError("camera length should be 2");
-            }
-            else if (camera[0] < -180 || camera[0] > 180) {
-                throw new VerifyError("camera[0] should be between -180 and 180");
-            }
-            else if (camera[1] < -180 || camera[1] > 180) {
-                throw new VerifyError("camera[1] should be between -180 and 180");
-            }
-
-            if (hotbar == null) {
-                throw new VerifyError("hotbar should not be null");
-            }
-            else if (hotbar.length != 9) {
-                throw new VerifyError("hotbar length should be 9");
-            }
-
+                           boolean sneak, boolean sprint, boolean swapHands, boolean use) {
             this.ESC = esc;
             this.attack = attack;
             this.back = back;
@@ -60,6 +48,38 @@ public class AgentServerSchema {
             this.sprint = sprint;
             this.swapHands = swapHands;
             this.use = use;
+        }
+
+        private StepRequest verify() throws VerifyException {
+            if (camera == null) {
+                throw new VerifyException("camera should not be null");
+            }
+            else if (camera.length != 2) {
+                throw new VerifyException("camera length should be 2");
+            }
+            else if (camera[0] < -180 || camera[0] > 180) {
+                throw new VerifyException("camera[0] should be between -180 and 180");
+            }
+            else if (camera[1] < -180 || camera[1] > 180) {
+                throw new VerifyException("camera[1] should be between -180 and 180");
+            }
+
+            if (hotbar == null) {
+                throw new VerifyException("hotbar should not be null");
+            }
+            else if (hotbar.length != 9) {
+                throw new VerifyException("hotbar length should be 9");
+            }
+
+            return this;
+        }
+
+        public static StepRequest fromJson(String json, Gson gson) throws VerifyException {
+            return gson.fromJson(json, StepRequest.class).verify();
+        }
+
+        public static StepRequest fromSocketDataInputStream(SocketInputStream in) throws IOException, VerifyException {
+            return fromJson(in.readString(), new Gson());
         }
     }
 
@@ -121,6 +141,14 @@ public class AgentServerSchema {
         public Response(int[][][] observation, Map<String, Object> info) {
             this.observation = observation;
             this.info = info;
+        }
+
+        public String toJson(Gson gson) {
+            return gson.toJson(this);
+        }
+
+        public String toJson() {
+            return toJson(new GsonBuilder().serializeNulls().create());
         }
     }
 }
