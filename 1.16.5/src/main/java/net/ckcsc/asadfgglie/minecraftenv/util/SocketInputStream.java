@@ -10,7 +10,8 @@ public class SocketInputStream extends DataInputStream {
     /**
      * Creates a DataInputStream that uses the specified
      * underlying Socket.
-     *
+     * <p>
+     * Closing Stream will close the associated socket.
      * @param socket the specified input stream by {@code socket.getInputStream()}
      */
     public SocketInputStream(Socket socket) throws IOException {
@@ -19,6 +20,7 @@ public class SocketInputStream extends DataInputStream {
 
     public String readString(Charset charset) throws IOException {
         byte[] tmp = new byte[this.readInt()];
+        this.readFully(tmp);
         return new String(tmp, charset);
     }
 
