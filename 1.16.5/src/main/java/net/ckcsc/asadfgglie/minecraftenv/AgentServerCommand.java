@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import net.ckcsc.asadfgglie.minecraftenv.exception.VerifyException;
 import net.ckcsc.asadfgglie.minecraftenv.util.SocketInputStream;
 import net.ckcsc.asadfgglie.minecraftenv.util.SocketOutputStream;
 import net.minecraft.client.Minecraft;
@@ -77,14 +78,8 @@ public class AgentServerCommand {
                     public void onRender(Socket socket) throws IOException {
                         SocketOutputStream out = new SocketOutputStream(socket);
                         try {
-                            // TODO: decode obs byt array to rgb array in python
                             MinecraftEnv.LOGGER.info("Client {} render, ip: {}", socket.getInetAddress().hashCode(), socket.getRemoteSocketAddress().toString());
-                            String info = new Gson().toJson(getInfo());
-                            out.writeString(info);
-                            byte[] obs = getObservation();
-                            out.writeInt(obs.length);
-                            out.write(obs);
-                            out.flush();
+                            out.writeResponse(getResponse());
                         }
                         catch (ExecutionException | InterruptedException e){
                             MinecraftEnv.LOGGER.error("Client {} render, ip: {}", socket.getInetAddress().hashCode(), socket.getRemoteSocketAddress().toString(), e);
@@ -97,15 +92,15 @@ public class AgentServerCommand {
                     public void onStep(Socket socket) throws IOException {
                         SocketOutputStream out = new SocketOutputStream(socket);
                         SocketInputStream in = new SocketInputStream(socket);
-//                        try {
-//                            AgentServerSchema.StepRequest request = AgentServerSchema.StepRequest.fromSocketDataInputStream(in);
-//                            MinecraftEnv.LOGGER.info("Client {} step: {}, ip: {}", socket.getInetAddress().hashCode(), new Gson().toJson(request), socket.getRemoteSocketAddress().toString());
-//                            out.writeString(getResponse().toJson());
-//                        }
-//                        catch (ExecutionException | InterruptedException | VerifyException e) {
-//                            MinecraftEnv.LOGGER.error("Client {} step, ip: {}", socket.getInetAddress().hashCode(), socket.getRemoteSocketAddress().toString(), e);
-//                            out.writeString(e.getMessage());
-//                        }
+                        try {
+                            AgentServerSchema.StepRequest request = AgentServerSchema.StepRequest.fromSocketDataInputStream(in);
+                            MinecraftEnv.LOGGER.info("Client {} step: {}, ip: {}", socket.getInetAddress().hashCode(), new Gson().toJson(request), socket.getRemoteSocketAddress().toString());
+                            out.writeResponse(getResponse());
+                        }
+                        catch (ExecutionException | InterruptedException | VerifyException e) {
+                            MinecraftEnv.LOGGER.error("Client {} step, ip: {}", socket.getInetAddress().hashCode(), socket.getRemoteSocketAddress().toString(), e);
+                            out.writeString(e.getMessage());
+                        }
                         out.flush();
                     }
 
@@ -158,23 +153,31 @@ public class AgentServerCommand {
         return server;
     }
 
-//    public static AgentServerSchema.Response getResponse() throws ExecutionException, InterruptedException {
-//        return new AgentServerSchema.Response(getObservation(), getInfo());
-//    }
-
-    public static Map<String, Object> getInfo() {
+    public static Map<String, Object> getInfo(NativeImage nativeImage) {
         Map<String, Object> info = new HashMap<>();
         info.put("timestamp", date.format(new Date()));
+
+        HashMap<String, Object> pov = new HashMap<>();
+        pov.put("height", nativeImage.getHeight());
+        pov.put("width", nativeImage.getWidth());
+        info.put("pov", pov);
+
         return info;
     }
 
-    public static byte[] getObservation() throws ExecutionException, InterruptedException {
-        CompletableFuture<byte[]> future = new CompletableFuture<>();
+    public static AgentServerSchema.Response getResponse() throws ExecutionException, InterruptedException {
+        CompletableFuture<AgentServerSchema.Response> future = new CompletableFuture<>();
         Minecraft.getInstance().executeBlocking(() -> {
             try (NativeImage nativeImage = ScreenShotHelper.takeScreenshot(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight(), Minecraft.getInstance().getMainRenderTarget())) {
-                future.complete(nativeImage.asByteArray());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+                byte[] bytes = new byte[nativeImage.getWidth() * nativeImage.getHeight() * 4];
+                int[] pixel = nativeImage.makePixelArray();
+                for (int i = 0; i < nativeImage.getWidth() * nativeImage.getHeight(); i++) {
+                    bytes[i * 4] = (byte) ((pixel[i] >>> 24) & 0xFF);
+                    bytes[i * 4 + 1] = (byte) ((pixel[i] >>> 16) & 0xFF);
+                    bytes[i * 4 + 2] = (byte) ((pixel[i] >>> 8) & 0xFF);
+                    bytes[i * 4 + 3] = (byte) (pixel[i] & 0xFF);
+                }
+                future.complete(new AgentServerSchema.Response(bytes, getInfo(nativeImage)));
             }
         });
         return future.get();

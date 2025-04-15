@@ -1,7 +1,6 @@
 package net.ckcsc.asadfgglie.minecraftenv;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 import net.ckcsc.asadfgglie.minecraftenv.exception.VerifyException;
 import net.ckcsc.asadfgglie.minecraftenv.util.SocketInputStream;
@@ -85,9 +84,9 @@ public class AgentServerSchema {
 
     public static class Response {
         /**
-         * np.ndarray((360, 640, 3), dtype=uint8) // rgb image with whid 640, height 360
+         * np.ndarray((360 * 640), dtype=uint8) // rgb image with whid 640, height 360
          */
-        public final int[][][] observation;
+        public final byte[] observation;
         /**
          * <code>
          * {
@@ -138,17 +137,11 @@ public class AgentServerSchema {
          */
         public final Map<String, Object> info;
 
-        public Response(int[][][] observation, Map<String, Object> info) {
+        public final static Gson gson = new Gson();
+
+        public Response(byte[] observation, Map<String, Object> info) {
             this.observation = observation;
             this.info = info;
-        }
-
-        public String toJson(Gson gson) {
-            return gson.toJson(this);
-        }
-
-        public String toJson() {
-            return toJson(new GsonBuilder().serializeNulls().create());
         }
     }
 }
