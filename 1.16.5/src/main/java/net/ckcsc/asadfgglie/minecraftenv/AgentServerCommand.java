@@ -7,12 +7,14 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import net.ckcsc.asadfgglie.minecraftenv.exception.VerifyException;
 import net.ckcsc.asadfgglie.minecraftenv.util.SocketInputStream;
 import net.ckcsc.asadfgglie.minecraftenv.util.SocketOutputStream;
+import net.minecraft.client.GameSettings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.NativeImage;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.Commands;
 import net.minecraft.util.ScreenShotHelper;
 import net.minecraft.util.text.TranslationTextComponent;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -26,6 +28,9 @@ import java.util.concurrent.ExecutionException;
 public class AgentServerCommand {
     private static ServerSocketThread server;
     private static final SimpleDateFormat date = new SimpleDateFormat("HH:mm:ss");
+
+    private static int width = 640;
+    private static int height = 360;
 
     private AgentServerCommand() {}
 
@@ -93,7 +98,7 @@ public class AgentServerCommand {
                         SocketOutputStream out = new SocketOutputStream(socket);
                         SocketInputStream in = new SocketInputStream(socket);
                         try {
-                            AgentServerSchema.StepRequest request = AgentServerSchema.StepRequest.fromSocketDataInputStream(in);
+                            AgentServerSchema.StepRequest request = AgentServerSchema.Request.fromSocketDataInputStream(in, AgentServerSchema.StepRequest.class);
                             MinecraftEnv.LOGGER.info("Client {} step: {}, ip: {}", socket.getInetAddress().hashCode(), new Gson().toJson(request), socket.getRemoteSocketAddress().toString());
                             out.writeResponse(getResponse());
                         }
@@ -108,6 +113,30 @@ public class AgentServerCommand {
                     public void onClose(Socket socket) throws IOException {
                         socket.close();
                     }
+
+                    @Override
+                    public void onSetup(Socket socket) throws IOException {
+                        SocketOutputStream out = new SocketOutputStream(socket);
+                        SocketInputStream in = new SocketInputStream(socket);
+                        try {
+                            AgentServerSchema.SetupRequest request = AgentServerSchema.Request.fromSocketDataInputStream(in, AgentServerSchema.SetupRequest.class);
+                            MinecraftEnv.LOGGER.info("Client {} setup: {}, ip: {}", socket.getInetAddress().hashCode(), new Gson().toJson(request), socket.getRemoteSocketAddress().toString());
+
+                            GameSettings settings = Minecraft.getInstance().options;
+                            settings.gamma = request.gamma;
+                            settings.fov = request.fov;
+                            Minecraft.getInstance().getWindow().setGuiScale(request.guiScale);
+
+                            resize(request.width, request.height);
+
+                            out.writeMap(getInfo());
+                        }
+                        catch (VerifyException e) {
+                            MinecraftEnv.LOGGER.error("Client {} setup, ip: {}", socket.getInetAddress().hashCode(), socket.getRemoteSocketAddress().toString(), e);
+                            out.writeString(e.getMessage());
+                        }
+                        out.flush();
+                    }
                 });
             } catch (IOException e) {
                 server = null;
@@ -117,7 +146,6 @@ public class AgentServerCommand {
             }
 
             server.start();
-
             source.sendSuccess(new TranslationTextComponent("command.minecraftenv.start_agent_server", hostName, port), true);
             return 0;
         }
@@ -154,8 +182,7 @@ public class AgentServerCommand {
     }
 
     public static Map<String, Object> getInfo(NativeImage nativeImage) {
-        Map<String, Object> info = new HashMap<>();
-        info.put("timestamp", date.format(new Date()));
+        Map<String, Object> info = getInfo();
 
         HashMap<String, Object> pov = new HashMap<>();
         pov.put("height", nativeImage.getHeight());
@@ -165,8 +192,22 @@ public class AgentServerCommand {
         return info;
     }
 
+    public static Map<String, Object> getInfo() {
+        Map<String, Object> info = new HashMap<>();
+        info.put("timestamp", date.format(new Date()));
+        info.put("width", width);
+        info.put("height", height);
+        GameSettings settings = Minecraft.getInstance().options;
+        info.put("fov", settings.fov);
+        info.put("guiScale", Minecraft.getInstance().getWindow().getGuiScale());
+        info.put("gamma", settings.gamma);
+
+        return info;
+    }
+
     public static AgentServerSchema.Response getResponse() throws ExecutionException, InterruptedException {
         CompletableFuture<AgentServerSchema.Response> future = new CompletableFuture<>();
+        resize();
         Minecraft.getInstance().executeBlocking(() -> {
             try (NativeImage nativeImage = ScreenShotHelper.takeScreenshot(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight(), Minecraft.getInstance().getMainRenderTarget())) {
                 byte[] bytes = new byte[nativeImage.getWidth() * nativeImage.getHeight() * 4];
@@ -181,5 +222,19 @@ public class AgentServerCommand {
             }
         });
         return future.get();
+    }
+
+    public static void resize() {
+        resize(width, height);
+    }
+
+    public static void resize(int width, int height) {
+        AgentServerCommand.width = width;
+        AgentServerCommand.height = height;
+        Minecraft.getInstance().executeBlocking(() -> {
+            if (Minecraft.getInstance().getWindow().getWidth() != AgentServerCommand.width || Minecraft.getInstance().getWindow().getHeight() != AgentServerCommand.height) {
+                GLFW.glfwSetWindowSize(Minecraft.getInstance().getWindow().getWindow(), AgentServerCommand.width, AgentServerCommand.height);
+            }
+        });
     }
 }

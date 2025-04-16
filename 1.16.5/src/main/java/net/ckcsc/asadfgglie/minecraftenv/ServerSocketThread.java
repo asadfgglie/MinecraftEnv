@@ -72,11 +72,10 @@ public class ServerSocketThread extends ServerSocket {
                         try {
                             event = getEvent(socket);
                         }
-                        catch (IOException e) {
-                            MinecraftEnv.LOGGER.error("MinecraftEnv got error when processing event", e);
+                        catch (IOException ignored) {
                             try {
                                 socket.close();
-                            } catch (IOException ignored) {}
+                            } catch (IOException ignored1) {}
                             return;
                         }
                         try {
@@ -137,10 +136,11 @@ public class ServerSocketThread extends ServerSocket {
         return (!event.isEmpty()) ? String.valueOf(event.charAt(0)).toUpperCase() + event.substring(1).toLowerCase() : "";
     }
 
-    public abstract static class EventHandler {
-        public abstract void onPing(Socket socket) throws Exception;
-        public abstract void onRender(Socket socket) throws Exception;
-        public abstract void onStep(Socket socket) throws Exception;
-        public abstract void onClose(Socket socket) throws Exception;
+    public interface EventHandler {
+        void onPing(Socket socket) throws Exception;
+        void onRender(Socket socket) throws Exception;
+        void onStep(Socket socket) throws Exception;
+        void onClose(Socket socket) throws Exception;
+        void onSetup(Socket socket) throws Exception;
     }
 }

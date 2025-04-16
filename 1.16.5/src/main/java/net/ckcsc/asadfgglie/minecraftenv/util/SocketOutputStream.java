@@ -6,6 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import static net.ckcsc.asadfgglie.minecraftenv.AgentServerSchema.Response.gson;
 
@@ -36,7 +37,11 @@ public class SocketOutputStream extends DataOutputStream {
     }
 
     public void writeResponse(AgentServerSchema.Response response) throws IOException {
-        writeString(gson.toJson(response.info));
+        writeMap(response.info);
         writeByteArray(response.observation);
+    }
+
+    public void writeMap(Map<String, Object> map) throws IOException {
+        writeString(gson.toJson(map));
     }
 }

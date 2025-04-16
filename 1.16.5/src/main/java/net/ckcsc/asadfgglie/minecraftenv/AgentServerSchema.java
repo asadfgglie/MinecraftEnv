@@ -9,7 +9,18 @@ import java.io.IOException;
 import java.util.Map;
 
 public class AgentServerSchema {
-    public static class StepRequest {
+    public abstract static class Request {
+        public abstract <T extends Request> T verify() throws VerifyException;
+        static <T extends Request> T fromJson(String json, Gson gson, Class<T> clazz) throws VerifyException {
+            return gson.fromJson(json, clazz).verify();
+        }
+
+        static <T extends Request> T fromSocketDataInputStream(SocketInputStream in, Class<T> clazz) throws IOException, VerifyException {
+            return fromJson(in.readString(), new Gson(), clazz);
+        }
+    }
+
+    public static class StepRequest extends Request {
         @SerializedName("esc")
         public final boolean ESC;
         public final boolean attack;
@@ -49,7 +60,7 @@ public class AgentServerSchema {
             this.use = use;
         }
 
-        private StepRequest verify() throws VerifyException {
+        public <T extends Request> T verify() throws VerifyException {
             if (camera == null) {
                 throw new VerifyException("camera should not be null");
             }
@@ -69,16 +80,42 @@ public class AgentServerSchema {
             else if (hotbar.length != 9) {
                 throw new VerifyException("hotbar length should be 9");
             }
+            return (T) this;
+        }
+    }
 
-            return this;
+    public static class SetupRequest extends Request {
+        public final int width;
+        public final int height;
+        public final double gamma;
+        public final double fov;
+        public final double guiScale;
+
+        private SetupRequest(int width, int height, double gamma, double fov, double guiScale) {
+            this.width = width;
+            this.height = height;
+            this.gamma = gamma;
+            this.fov = fov;
+            this.guiScale = guiScale;
         }
 
-        public static StepRequest fromJson(String json, Gson gson) throws VerifyException {
-            return gson.fromJson(json, StepRequest.class).verify();
-        }
-
-        public static StepRequest fromSocketDataInputStream(SocketInputStream in) throws IOException, VerifyException {
-            return fromJson(in.readString(), new Gson());
+        public <T extends Request> T verify() throws VerifyException {
+            if (width <= 0) {
+                throw new VerifyException("width should be greater than 0");
+            }
+            if (height <= 0) {
+                throw new VerifyException("height should be greater than 0");
+            }
+            if (guiScale <= 0) {
+                throw new VerifyException("guiScale should be greater than 0");
+            }
+            if (gamma <= 0) {
+                throw new VerifyException("gamma should be greater than 0");
+            }
+            if (fov <= 0) {
+                throw new VerifyException("fov should be greater than 0");
+            }
+            return (T) this;
         }
     }
 
