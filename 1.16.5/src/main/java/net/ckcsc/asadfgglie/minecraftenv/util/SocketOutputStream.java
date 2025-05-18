@@ -26,9 +26,7 @@ public class SocketOutputStream extends DataOutputStream {
     }
 
     public void writeString(String s) throws IOException {
-        byte[] tmp = s.getBytes(StandardCharsets.UTF_8);
-        this.writeInt(tmp.length);
-        this.write(tmp);
+        this.writeByteArray(s.getBytes(StandardCharsets.UTF_8));
     }
 
     public void writeByteArray(byte[] b) throws IOException {

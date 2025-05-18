@@ -22,22 +22,22 @@ public class AgentServerSchema {
 
     public static class StepRequest extends Request {
         @SerializedName("esc")
-        public final boolean ESC;
-        public final boolean attack;
-        public final boolean back;
-        public final float[] camera; // new float[2] with min -180, max 180
-        public final boolean drop;
-        public final boolean forward;
-        public final boolean[] hotbar; // new boolean[9]
-        public final boolean inventory;
-        public final boolean jump;
-        public final boolean left;
-        public final boolean pickItem;
-        public final boolean right;
-        public final boolean sneak;
-        public final boolean sprint;
-        public final boolean swapHands;
-        public final boolean use;
+        public final boolean ESC;       // put esc
+        public final boolean attack;    // click mouse left
+        public final boolean back;      // put S
+        public final float[] camera;    // new float[2] with min -180, max 180, move mouse
+        public final boolean drop;      // put Q
+        public final boolean forward;   // put W
+        public final boolean[] hotbar;  // new boolean[9], put hotbar 1-9
+        public final boolean inventory; // put E
+        public final boolean jump;      // put space
+        public final boolean left;      // put A
+        public final boolean pickItem;  // click mouse middle
+        public final boolean right;     // put D
+        public final boolean sneak;     // put shift
+        public final boolean sprint;    // put ctrl + W
+        public final boolean swapHands; // put F
+        public final boolean use;       // click mouse right
 
         private StepRequest(boolean esc, boolean attack, boolean back, float[] camera, boolean drop, boolean forward,
                            boolean[] hotbar, boolean inventory, boolean jump, boolean left, boolean pickItem, boolean right,
@@ -127,7 +127,7 @@ public class AgentServerSchema {
         /**
          * <code>
          * {
-         *     "plain_inventory": {
+         *     "inventory": {
          *         i: {
          *             "quantity": int, "type": item name
          *         } for i in range(36)
@@ -162,13 +162,11 @@ public class AgentServerSchema {
          *         "score": int,
          *         "xp": int
          *     },
-         *     "location_stats": {
-         *         "xpos": float,
-         *         "ypos": float,
-         *         "zpos": float,
-         *         "pitch": float,
-         *         "yaw": float
-         *     }
+         *     "xpos": float,
+         *     "ypos": float,
+         *     "zpos": float,
+         *     "pitch": float,
+         *     "yaw": float
          * }
          * </code>
          */

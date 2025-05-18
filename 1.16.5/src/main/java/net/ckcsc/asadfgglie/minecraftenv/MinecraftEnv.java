@@ -1,4 +1,5 @@
 package net.ckcsc.asadfgglie.minecraftenv;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.server.command.ConfigCommand;
@@ -49,5 +50,10 @@ public class MinecraftEnv {
         AgentServerCommand.register(event.getDispatcher());
 
         ConfigCommand.register(event.getDispatcher());
+    }
+
+    @SubscribeEvent
+    public void onKeyInput(InputEvent.KeyInputEvent event) {
+
     }
 }
